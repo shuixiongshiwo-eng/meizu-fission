@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美租裂变 · 管理后台</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; }
+        .container { max-width: 960px; margin: 0 auto; padding: 20px 16px 40px; }
+        h1 { color: #1565c0; font-size: 1.3em; margin-bottom: 6px; }
+        .subtitle { color: #888; font-size: 0.85em; margin-bottom: 16px; }
+        .login-card { background: #fff; border-radius: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 30px 24px; max-width: 400px; margin: 40px auto; text-align: center; }
+        .login-card .icon { font-size: 2.6em; margin-bottom: 10px; }
+        .login-card input { width: 100%; padding: 13px 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; outline: none; margin-bottom: 12px; transition: border-color 0.2s; }
+        .login-card input:focus { border-color: #1565c0; }
+        .login-card button { width: 100%; padding: 13px; background: #1565c0; color: #fff; border: none; border-radius: 10px; font-size: 1em; font-weight: 700; cursor: pointer; }
+        .login-card button:hover { background: #0d47a1; }
+        .tab-bar { display: flex; background: #fff; border-radius: 12px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .tab-bar .tab { flex: 1; text-align: center; padding: 12px 6px; font-size: 0.88em; cursor: pointer; color: #666; border-bottom: 3px solid transparent; transition: all 0.15s; }
+        .tab-bar .tab.active { color: #1565c0; font-weight: 700; background: #e3f2fd; border-bottom: 3px solid #1565c0; }
+        .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+        .toolbar .stats { font-size: 0.85em; color: #666; }
+        .toolbar .actions { display: flex; gap: 8px; }
+        .btn-sm { padding: 8px 14px; border: none; border-radius: 8px; font-size: 0.82em; font-weight: 600; cursor: pointer; }
+        .btn-export { background: #2e7d32; color: #fff; }
+        .btn-refresh { background: #fff; color: #1565c0; border: 1px solid #1565c0; }
+        .search-box { display: flex; gap: 8px; margin-bottom: 12px; }
+        .search-box input { flex: 1; padding: 10px 14px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; outline: none; }
+        .search-box input:focus { border-color: #1565c0; }
+        table { width: 100%; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-collapse: collapse; }
+        th { background: #f0f4f8; padding: 10px 12px; text-align: left; font-size: 0.82em; color: #555; border-bottom: 1px solid #e8ecf0; white-space: nowrap; }
+        td { padding: 10px 12px; font-size: 0.85em; border-bottom: 1px solid #f0f0f0; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #fafbff; }
+        .role-tag { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 0.78em; }
+        .role-tag.broker { background: #e8f5e9; color: #2e7d32; }
+        .role-tag.manager { background: #e3f2fd; color: #1565c0; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .rank-list { display: flex; flex-direction: column; gap: 8px; }
+        .rank-item { display: flex; align-items: center; background: #fff; border-radius: 10px; padding: 12px 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+        .rank-item.top1 { background: linear-gradient(135deg, #fff8e1, #ffecb3); border-left: 4px solid #ffc107; }
+        .rank-item.top2 { background: linear-gradient(135deg, #f5f5f5, #e0e0e0); border-left: 4px solid #9e9e9e; }
+        .rank-item.top3 { background: linear-gradient(135deg, #fbe9e7, #ffccbc); border-left: 4px solid #ff7043; }
+        .rank-medal { font-size: 1.4em; margin-right: 12px; min-width: 30px; text-align: center; }
+        .rank-num { font-size: 1em; font-weight: 700; color: #aaa; margin-right: 12px; min-width: 30px; text-align: center; }
+        .rank-info { flex: 1; }
+        .rank-name { font-weight: 700; }
+        .rank-id { color: #999; font-size: 0.82em; }
+        .rank-count { font-weight: 700; font-size: 1.1em; color: #f57c00; white-space: nowrap; }
+        .tree-node { background: #fff; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+        .tree-inviter { font-weight: 700; color: #1565c0; margin-bottom: 6px; }
+        .tree-invitees { padding-left: 20px; border-left: 2px solid #e3f2fd; margin-left: 6px; }
+        .tree-invitee { padding: 6px 0; font-size: 0.88em; color: #555; border-bottom: 1px dashed #f0f0f0; }
+        .tree-invitee:last-child { border-bottom: none; }
+        .empty-state { text-align: center; padding: 40px 20px; color: #aaa; background: #fff; border-radius: 12px; }
+        .empty-state .icon { font-size: 2.6em; margin-bottom: 8px; }
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 14px 22px; border-radius: 10px; font-size: 0.9em; z-index: 9999; opacity: 0; transition: opacity 0.2s; pointer-events: none; max-width: 80%; text-align: center; }
+        .toast.show { opacity: 1; }
+        .logout { float: right; color: #c62828; font-size: 0.82em; cursor: pointer; text-decoration: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- 登录页 -->
+    <div id="loginPage" class="login-card">
+        <div class="icon">🔐</div>
+        <h1>美租裂变管理后台</h1>
+        <p class="subtitle">请输入管理口令</p>
+        <input type="password" id="passcodeInput" placeholder="管理口令" onkeydown="if(event.key==='Enter')doLogin()">
+        <button onclick="doLogin()">登录</button>
+    </div>
+
+    <!-- 后台主体 -->
+    <div id="mainPage" style="display:none">
+        <span class="logout" onclick="doLogout()">退出登录</span>
+        <h1>美租裂变管理后台</h1>
+        <p class="subtitle">名单 / 关系树 / 邀请排行</p>
+
+        <div class="tab-bar">
+            <div class="tab active" onclick="switchTab(0)">📋 全部名单</div>
+            <div class="tab" onclick="switchTab(1)">🌳 邀请关系树</div>
+            <div class="tab" onclick="switchTab(2)">🏆 邀请排行</div>
+        </div>
+
+        <!-- Tab1 全部名单 -->
+        <div class="page active" id="tabList">
+            <div class="toolbar">
+                <div class="stats" id="listStats"></div>
+                <div class="actions">
+                    <button class="btn-sm btn-refresh" onclick="loadAll()">🔄 刷新</button>
+                    <button class="btn-sm btn-export" onclick="exportParticipants()">⬇ 导出CSV</button>
+                </div>
+            </div>
+            <div class="search-box">
+                <input type="text" id="listSearch" placeholder="搜索姓名/系统号/推荐码..." oninput="renderList()">
+            </div>
+            <div id="listBody"></div>
+        </div>
+
+        <!-- Tab2 关系树 -->
+        <div class="page" id="tabTree">
+            <div class="toolbar">
+                <div class="stats" id="treeStats"></div>
+                <button class="btn-sm btn-refresh" onclick="loadAll()">🔄 刷新</button>
+            </div>
+            <div id="treeBody"></div>
+        </div>
+
+        <!-- Tab3 排行 -->
+        <div class="page" id="tabRank">
+            <div class="toolbar">
+                <div class="stats" id="rankStats"></div>
+                <button class="btn-sm btn-export" onclick="exportRanking()">⬇ 导出排行CSV</button>
+            </div>
+            <div id="rankBody"></div>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="leancloud.js"></script>
+<script>
+var _allParticipants = [];
+var _allLogs = [];
+var _currentTab = 0;
+
+function toast(msg, ms) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.classList.remove('show'); }, ms || 2000);
+}
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
+function formatDate(d) {
+    if (!d) return '';
+    var dt = new Date(d);
+    if (isNaN(dt.getTime())) return String(d).substring(0, 16).replace('T', ' ');
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+    return dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate()) + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+}
+
+// ---- 登录 ----
+async function doLogin() {
+    var code = document.getElementById('passcodeInput').value.trim();
+    if (!code) { toast('请输入口令'); return; }
+    try {
+        // 优先用 config 里的口令；若 AdminConfig 表有记录则校验表
+        var admin = await MZLC.findAdminByPasscode(code);
+        var ok = false;
+        if (admin) {
+            ok = true;
+        } else if (code === MEIZU_FISSION_CONFIG.adminPasscode) {
+            ok = true;
+        }
+        if (!ok) { toast('口令错误'); return; }
+        sessionStorage.setItem('mz_fission_admin', '1');
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('mainPage').style.display = 'block';
+        await loadAll();
+    } catch (e) {
+        // 表查询失败时回退到本地口令
+        if (code === MEIZU_FISSION_CONFIG.adminPasscode) {
+            sessionStorage.setItem('mz_fission_admin', '1');
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('mainPage').style.display = 'block';
+            await loadAll();
+        } else {
+            toast('登录失败：' + (e.message || '请重试'));
+        }
+    }
+}
+
+function doLogout() {
+    sessionStorage.removeItem('mz_fission_admin');
+    location.reload();
+}
+
+// ---- 数据加载 ----
+async function loadAll() {
+    toast('加载中...', 1000);
+    try {
+        _allParticipants = await MZLC.findAllParticipants();
+        _allLogs = await MZLC.findAllInviteLogs();
+        renderList();
+        renderTree();
+        renderRank();
+        document.getElementById('listStats').textContent = '共 ' + _allParticipants.length + ' 人报名';
+        var withInviter = _allParticipants.filter(function (p) { return p.invitedBy; }).length;
+        var rate = _allParticipants.length ? Math.round(withInviter / _allParticipants.length * 100) : 0;
+        document.getElementById('treeStats').textContent = '共 ' + _allLogs.length + ' 条邀请关系 ｜ 归因率 ' + rate + '%（' + withInviter + '/' + _allParticipants.length + '）';
+        document.getElementById('rankStats').textContent = '按邀请人数排序';
+    } catch (e) {
+        toast('加载失败：' + (e.message || ''));
+    }
+}
+
+// ---- Tab 切换 ----
+function switchTab(idx) {
+    _currentTab = idx;
+    var tabs = document.querySelectorAll('.tab-bar .tab');
+    tabs.forEach(function (t, i) { t.classList.toggle('active', i === idx); });
+    var pages = ['tabList', 'tabTree', 'tabRank'];
+    pages.forEach(function (id, i) {
+        document.getElementById(id).classList.toggle('active', i === idx);
+    });
+}
+
+// ---- Tab1 名单渲染 ----
+function renderList() {
+    var q = (document.getElementById('listSearch').value || '').trim().toLowerCase();
+    var list = _allParticipants;
+    if (q) {
+        list = list.filter(function (p) {
+            return [p.name, p.systemId, p.refCode, p.invitedByName].some(function (v) {
+                return String(v || '').toLowerCase().indexOf(q) >= 0;
+            });
+        });
+    }
+    // 按创建时间倒序
+    list = list.slice().sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+
+    var el = document.getElementById('listBody');
+    if (!list.length) {
+        el.innerHTML = '<div class="empty-state"><div class="icon">📭</div><div>暂无数据</div></div>';
+        return;
+    }
+    var html = '<table><thead><tr><th>姓名</th><th>系统号</th><th>角色</th><th>推荐码</th><th>邀请人</th><th>报名时间</th></tr></thead><tbody>';
+    list.forEach(function (p) {
+        var rText = p.role === 'broker' ? '经纪人' : (p.role === 'manager' ? '资管' : p.role);
+        html += '<tr>';
+        html += '<td>' + escapeHtml(p.name) + '</td>';
+        html += '<td>' + escapeHtml(p.systemId) + '</td>';
+        html += '<td><span class="role-tag ' + (p.role || '') + '">' + rText + '</span></td>';
+        html += '<td>' + escapeHtml(p.refCode) + '</td>';
+        html += '<td>' + (p.invitedByName ? escapeHtml(p.invitedByName) + ' (' + escapeHtml(p.invitedBy) + ')' : '<span style="color:#bbb">—</span>') + '</td>';
+        html += '<td>' + formatDate(p.createdAt) + '</td>';
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+}
+
+// ---- Tab2 关系树渲染 ----
+function renderTree() {
+    // 按邀请人分组：inviterRefCode -> [{invitee...}]
+    var groups = {};
+    _allLogs.forEach(function (log) {
+        var key = log.inviterRefCode;
+        if (!groups[key]) groups[key] = { inviterRefCode: log.inviterRefCode, inviterName: log.inviterName, invitees: [] };
+        groups[key].invitees.push(log);
+    });
+    // 按邀请人数倒序
+    var arr = Object.values(groups).sort(function (a, b) { return b.invitees.length - a.invitees.length; });
+
+    var el = document.getElementById('treeBody');
+    if (!arr.length) {
+        el.innerHTML = '<div class="empty-state"><div class="icon">🌳</div><div>暂无邀请关系<br>需有人通过他人链接报名才会产生</div></div>';
+        return;
+    }
+    var html = '';
+    arr.forEach(function (g) {
+        html += '<div class="tree-node">';
+        html += '<div class="tree-inviter">👤 ' + escapeHtml(g.inviterName) + '（' + escapeHtml(g.inviterRefCode) + '）邀请了 ' + g.invitees.length + ' 人</div>';
+        html += '<div class="tree-invitees">';
+        g.invitees.forEach(function (inv) {
+            var rText = inv.inviteeRole === 'broker' ? '经纪人' : (inv.inviteeRole === 'manager' ? '资管' : '');
+            html += '<div class="tree-invitee">└ ' + escapeHtml(inv.inviteeName) + ' · ' + escapeHtml(inv.inviteeSystemId) + (rText ? ' · <span class="role-tag ' + inv.inviteeRole + '">' + rText + '</span>' : '') + ' · ' + formatDate(inv.createdAt) + '</div>';
+        });
+        html += '</div></div>';
+    });
+    el.innerHTML = html;
+}
+
+// ---- Tab3 排行渲染 ----
+function renderRank() {
+    // 按邀请人 refCode 统计人数（用 Participant.invitedBy 更准，覆盖所有归因）
+    var counts = {};
+    _allParticipants.forEach(function (p) {
+        if (!p.invitedBy) return;
+        if (!counts[p.invitedBy]) counts[p.invitedBy] = { refCode: p.invitedBy, name: p.invitedByName || '', count: 0 };
+        counts[p.invitedBy].count++;
+    });
+    // 补全邀请人姓名（若 invitedByName 缺失，从 Participant 表反查）
+    Object.values(counts).forEach(function (c) {
+        if (!c.name) {
+            var inviter = _allParticipants.find(function (p) { return p.refCode === c.refCode; });
+            if (inviter) c.name = inviter.name;
+        }
+    });
+    var arr = Object.values(counts).sort(function (a, b) { return b.count - a.count; });
+
+    var el = document.getElementById('rankBody');
+    if (!arr.length) {
+        el.innerHTML = '<div class="empty-state"><div class="icon">🏆</div><div>暂无排行数据</div></div>';
+        return;
+    }
+    var medals = ['🥇', '🥈', '🥉'];
+    var html = '<div class="rank-list">';
+    arr.forEach(function (c, i) {
+        var rank = i + 1;
+        var cls = rank <= 3 ? ' top' + rank : '';
+        var medal = rank <= 3 ? '<span class="rank-medal">' + medals[rank - 1] + '</span>' : '<span class="rank-num">' + rank + '</span>';
+        html += '<div class="rank-item' + cls + '">' + medal;
+        html += '<div class="rank-info"><div class="rank-name">' + escapeHtml(c.name || '未知') + '</div><div class="rank-id">推荐码 ' + escapeHtml(c.refCode) + '</div></div>';
+        html += '<div class="rank-count">' + c.count + ' 人</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+}
+
+// ---- CSV 导出 ----
+function downloadCSV(filename, rows) {
+    var BOM = '﻿';
+    var csv = BOM + rows.map(function (row) {
+        return row.map(function (cell) {
+            return '"' + String(cell == null ? '' : cell).replace(/"/g, '""') + '"';
+        }).join(',');
+    }).join('\n');
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function exportParticipants() {
+    if (!_allParticipants.length) { toast('无数据'); return; }
+    var rows = [['推荐码', '姓名', '系统号', '角色', '邀请人推荐码', '邀请人姓名', '分享链接', '报名时间']];
+    _allParticipants.slice().sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); }).forEach(function (p) {
+        rows.push([
+            p.refCode, p.name, p.systemId,
+            p.role === 'broker' ? '经纪人' : (p.role === 'manager' ? '资管' : p.role),
+            p.invitedBy || '', p.invitedByName || '',
+            p.shareUrl || '', formatDate(p.createdAt),
+        ]);
+    });
+    downloadCSV('美租裂变名单.csv', rows);
+    toast('已导出 ' + _allParticipants.length + ' 条');
+}
+
+function exportRanking() {
+    // 复用排行统计逻辑
+    var counts = {};
+    _allParticipants.forEach(function (p) {
+        if (!p.invitedBy) return;
+        if (!counts[p.invitedBy]) counts[p.invitedBy] = { refCode: p.invitedBy, name: p.invitedByName || '', count: 0 };
+        counts[p.invitedBy].count++;
+    });
+    Object.values(counts).forEach(function (c) {
+        if (!c.name) {
+            var inviter = _allParticipants.find(function (p) { return p.refCode === c.refCode; });
+            if (inviter) c.name = inviter.name;
+        }
+    });
+    var arr = Object.values(counts).sort(function (a, b) { return b.count - a.count; });
+    if (!arr.length) { toast('无排行数据'); return; }
+    var rows = [['排名', '姓名', '推荐码', '邀请人数']];
+    arr.forEach(function (c, i) {
+        rows.push([i + 1, c.name || '', c.refCode, c.count]);
+    });
+    downloadCSV('美租裂变邀请排行.csv', rows);
+    toast('已导出 ' + arr.length + ' 条');
+}
+
+// ---- 自动登录（sessionStorage 记忆）----
+(function () {
+    if (sessionStorage.getItem('mz_fission_admin') === '1') {
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('mainPage').style.display = 'block';
+        loadAll();
+    }
+})();
+</script>
+</body>
+</html>

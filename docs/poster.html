@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的专属海报</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; color: #333; min-height: 100vh; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px 16px 40px; }
+        .header { text-align: center; margin-bottom: 16px; }
+        .header h1 { color: #1565c0; font-size: 1.3em; }
+        .header p { color: #888; font-size: 0.85em; margin-top: 4px; }
+        .poster-wrap { background: #fff; border-radius: 16px; box-shadow: 0 2px 16px rgba(0,0,0,0.1); padding: 16px; text-align: center; }
+        #posterCanvas { width: 100%; max-width: 420px; height: auto; display: none; }
+        #posterImg { width: 100%; max-width: 420px; height: auto; border-radius: 8px; }
+        .loading { padding: 60px 0; color: #aaa; }
+        .loading .spin { font-size: 2em; display: block; margin-bottom: 10px; }
+        .tips { background: #fff8e1; border: 1px solid #ffe082; border-radius: 10px; padding: 12px 14px; margin: 16px 0; font-size: 0.82em; color: #795548; line-height: 1.7; text-align: left; }
+        .tips b { color: #e65100; }
+        .actions { display: flex; gap: 12px; margin-top: 16px; }
+        .btn { flex: 1; padding: 13px; border: none; border-radius: 12px; font-size: 0.95em; font-weight: 700; cursor: pointer; text-align: center; }
+        .btn-copy { background: #1565c0; color: #fff; }
+        .btn-copy:hover { background: #0d47a1; }
+        .btn-mine { background: #fff; color: #1565c0; border: 2px solid #1565c0; }
+        .link-box { background: #f0f4f8; border-radius: 10px; padding: 10px 12px; margin-top: 12px; font-size: 0.78em; color: #555; word-break: break-all; text-align: left; }
+        .back-link { display: inline-block; color: #1565c0; text-decoration: none; margin-bottom: 12px; font-size: 0.85em; }
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 14px 22px; border-radius: 10px; font-size: 0.9em; z-index: 9999; opacity: 0; transition: opacity 0.2s; pointer-events: none; max-width: 80%; text-align: center; }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <span class="back-link" onclick="location.href='index.html'">← 返回报名</span>
+    <div class="header">
+        <h1>🎉 你的专属海报已生成</h1>
+        <p>长按图片保存，转发给同事</p>
+    </div>
+
+    <div class="poster-wrap">
+        <div class="loading" id="loading"><span class="spin">⏳</span>正在生成海报...</div>
+        <canvas id="posterCanvas"></canvas>
+        <img id="posterImg" style="display:none">
+    </div>
+
+    <div class="tips">
+        💡 <b>使用说明</b>：① 长按上方海报图片 → 保存到手机相册 → 发送给同事；② 或点击「复制邀请链接」直接粘贴到微信；③ 同事通过你的链接报名，自动计入你的邀请数。
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-copy" onclick="copyLink()">📋 复制邀请链接</button>
+        <button class="btn btn-mine" onclick="location.href='mine.html'">👥 查看我的邀请</button>
+    </div>
+
+    <div class="link-box" id="linkBox"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="leancloud.js"></script>
+<script>
+var _refCode = null;
+var _shareUrl = null;
+
+function toast(msg, ms) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.classList.remove('show'); }, ms || 2000);
+}
+
+function getRef() {
+    var params = new URLSearchParams(location.search);
+    var ref = params.get('ref');
+    // 兜底：localStorage
+    if (!ref) ref = localStorage.getItem('mz_fission_ref');
+    return ref;
+}
+
+// 异步加载图片（必须同源，避免 canvas tainted）
+function loadImage(src) {
+    return new Promise(function (resolve, reject) {
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function () { resolve(img); };
+        img.onerror = function () { reject(new Error('图片加载失败: ' + src)); };
+        img.src = src;
+    });
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+
+// 文本换行（中文按字符宽度截断）
+function wrapText(ctx, text, maxWidth) {
+    var lines = [];
+    var cur = '';
+    for (var i = 0; i < text.length; i++) {
+        var test = cur + text[i];
+        if (ctx.measureText(test).width > maxWidth && cur) {
+            lines.push(cur);
+            cur = text[i];
+        } else {
+            cur = test;
+        }
+    }
+    if (cur) lines.push(cur);
+    return lines;
+}
+
+async function drawPoster(participant) {
+    var canvas = document.getElementById('posterCanvas');
+    // 海报尺寸 750x1334（适合手机竖屏保存）
+    canvas.width = 750;
+    canvas.height = 1334;
+    var ctx = canvas.getContext('2d');
+
+    // 1. 背景色块（素材图加载失败时的兜底）
+    var grad = ctx.createLinearGradient(0, 0, 0, 1334);
+    grad.addColorStop(0, '#1565c0');
+    grad.addColorStop(0.5, '#0d47a1');
+    grad.addColorStop(1, '#062c5f');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 750, 1334);
+
+    // 2. 尝试加载背景图（若 assets/bg.jpg 存在）
+    var hasBg = false;
+    try {
+        var bg = await loadImage('assets/bg.jpg');
+        ctx.drawImage(bg, 0, 0, 750, 1334);
+        hasBg = true;
+    } catch (e) {
+        // 无背景图：在渐变上画装饰
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.beginPath(); ctx.arc(120, 200, 180, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(680, 1100, 220, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // 3. 顶部标题区
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 64px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillText('美租裂变增长计划', 375, 150);
+    ctx.font = '28px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillStyle = hasBg ? 'rgba(255,255,255,0.9)' : '#bbdefb';
+    ctx.fillText('关注公众号 + 视频号，邀请同事赢激励', 375, 200);
+
+    // 4. 邀请人信息卡（半透明白底）
+    var cardY = 320;
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    roundRect(ctx, 80, cardY, 590, 220, 20);
+    ctx.fill();
+
+    ctx.fillStyle = '#1565c0';
+    ctx.textAlign = 'left';
+    ctx.font = 'bold 30px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillText('我是 ' + participant.name, 110, cardY + 60);
+    ctx.font = '24px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillStyle = '#666';
+    var roleText = participant.role === 'broker' ? '🏠 美租经纪人' : '📊 美租房资管';
+    ctx.fillText(roleText + ' ｜ 系统号 ' + participant.systemId, 110, cardY + 105);
+
+    ctx.fillStyle = '#e65100';
+    ctx.font = 'bold 26px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillText('邀请你一起参与活动，扫码即可报名', 110, cardY + 160);
+    ctx.fillStyle = '#999';
+    ctx.font = '20px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillText('我的推荐码：' + _refCode, 110, cardY + 195);
+
+    // 5. 两个二维码（公众号 + 视频号）
+    var qrSize = 240;
+    var qrY = 620;
+    var gzhX = 110;
+    var sphX = 400;
+
+    // 公众号码
+    ctx.fillStyle = '#fff';
+    roundRect(ctx, gzhX - 15, qrY - 15, qrSize + 30, qrSize + 80, 14);
+    ctx.fill();
+    try {
+        var gzh = await loadImage('assets/qrcode_gzh.png');
+        ctx.drawImage(gzh, gzhX, qrY, qrSize, qrSize);
+    } catch (e) {
+        ctx.fillStyle = '#eee';
+        ctx.fillRect(gzhX, qrY, qrSize, qrSize);
+        ctx.fillStyle = '#999';
+        ctx.textAlign = 'center';
+        ctx.font = '20px sans-serif';
+        ctx.fillText('公众号码', gzhX + qrSize / 2, qrY + qrSize / 2);
+    }
+    ctx.fillStyle = '#333';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 26px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillText('① 关注公众号', gzhX + qrSize / 2, qrY + qrSize + 45);
+
+    // 视频号码
+    ctx.fillStyle = '#fff';
+    roundRect(ctx, sphX - 15, qrY - 15, qrSize + 30, qrSize + 80, 14);
+    ctx.fill();
+    try {
+        var sph = await loadImage('assets/qrcode_sph.png');
+        ctx.drawImage(sph, sphX, qrY, qrSize, qrSize);
+    } catch (e) {
+        ctx.fillStyle = '#eee';
+        ctx.fillRect(sphX, qrY, qrSize, qrSize);
+        ctx.fillStyle = '#999';
+        ctx.textAlign = 'center';
+        ctx.font = '20px sans-serif';
+        ctx.fillText('视频号码', sphX + qrSize / 2, qrY + qrSize / 2);
+    }
+    ctx.fillStyle = '#333';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 26px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillText('② 关注视频号', sphX + qrSize / 2, qrY + qrSize + 45);
+
+    // 6. 底部引导文案
+    var footY = 1020;
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 30px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillText('③ 扫下方二维码报名参与', 375, footY);
+
+    // 报名入口提示（用文字引导，不画动态二维码，保持简单）
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    roundRect(ctx, 150, footY + 30, 450, 90, 14);
+    ctx.fill();
+    ctx.fillStyle = '#1565c0';
+    ctx.font = 'bold 28px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillText('点开我发的链接即可报名', 375, footY + 80);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font = '20px -apple-system, "PingFang SC", sans-serif';
+    ctx.fillText('（链接见下方「复制邀请链接」按钮）', 375, footY + 175);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '18px sans-serif';
+    ctx.fillText('美租事业部 · 裂变增长活动', 375, 1280);
+
+    // 7. 输出为图片
+    var dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    var imgEl = document.getElementById('posterImg');
+    imgEl.src = dataUrl;
+    imgEl.style.display = 'block';
+    canvas.style.display = 'none';
+    document.getElementById('loading').style.display = 'none';
+
+    // 填链接框
+    _shareUrl = participant.shareUrl || (MEIZU_FISSION_CONFIG.siteUrl + '?ref=' + _refCode);
+    document.getElementById('linkBox').textContent = '邀请链接：' + _shareUrl;
+}
+
+function copyLink() {
+    if (!_shareUrl) { toast('链接未就绪'); return; }
+    var done = function () { toast('✅ 邀请链接已复制，去微信粘贴'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(_shareUrl).then(done).catch(function () { fallbackCopy(_shareUrl, done); });
+    } else {
+        fallbackCopy(_shareUrl, done);
+    }
+}
+
+function fallbackCopy(text, done) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); done(); } catch (e) { toast('复制失败，请手动长按链接复制'); }
+    document.body.removeChild(ta);
+}
+
+async function init() {
+    _refCode = getRef();
+    if (!_refCode) {
+        document.getElementById('loading').innerHTML = '未找到推荐码，请先<a href="index.html" style="color:#1565c0">报名</a>';
+        return;
+    }
+    try {
+        var p = await MZLC.findByRefCode(_refCode);
+        if (!p) { document.getElementById('loading').textContent = '未查到报名记录'; return; }
+        await drawPoster(p);
+    } catch (e) {
+        document.getElementById('loading').textContent = '海报生成失败：' + (e.message || '请重试');
+    }
+}
+
+init();
+</script>
+</body>
+</html>

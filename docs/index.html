@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>美租裂变 · 报名</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: linear-gradient(180deg, #e3f2fd 0%, #f5f7fa 40%); color: #333; min-height: 100vh; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px 16px 40px; }
+        .hero { text-align: center; padding: 24px 0 16px; }
+        .hero .logo { font-size: 2.4em; }
+        .hero h1 { color: #1565c0; font-size: 1.5em; margin: 8px 0 6px; }
+        .hero .subtitle { color: #666; font-size: 0.9em; line-height: 1.6; }
+        .rules { background: #fff8e1; border: 1px solid #ffe082; border-radius: 10px; padding: 12px 14px; margin: 16px 0; font-size: 0.82em; color: #795548; line-height: 1.7; }
+        .rules b { color: #e65100; }
+        .card { background: #fff; border-radius: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); padding: 22px 20px; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; font-size: 0.88em; color: #555; margin-bottom: 8px; font-weight: 600; }
+        .form-group label .req { color: #c62828; }
+        .form-group input { width: 100%; padding: 13px 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 16px; outline: none; transition: border-color 0.2s; }
+        .form-group input:focus { border-color: #1565c0; }
+        .role-options { display: flex; gap: 12px; }
+        .role-options label { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 13px; border: 2px solid #e0e0e0; border-radius: 10px; cursor: pointer; font-size: 0.95em; font-weight: 600; color: #666; transition: all 0.15s; }
+        .role-options input { display: none; }
+        .role-options label.broker.sel { border-color: #2e7d32; background: #e8f5e9; color: #2e7d32; }
+        .role-options label.manager.sel { border-color: #1565c0; background: #e3f2fd; color: #1565c0; }
+        .invited-by { background: #f0f4f8; border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; font-size: 0.85em; color: #555; display: none; }
+        .invited-by b { color: #1565c0; }
+        .submit-btn { width: 100%; padding: 15px; background: #1565c0; color: #fff; border: none; border-radius: 12px; font-size: 1.05em; font-weight: 700; cursor: pointer; transition: background 0.15s; }
+        .submit-btn:hover { background: #0d47a1; }
+        .submit-btn:disabled { background: #90caf9; cursor: not-allowed; }
+        .links { text-align: center; margin-top: 18px; font-size: 0.85em; }
+        .links a { color: #1565c0; text-decoration: none; margin: 0 8px; }
+        .toast { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 14px 22px; border-radius: 10px; font-size: 0.9em; z-index: 9999; opacity: 0; transition: opacity 0.2s; pointer-events: none; max-width: 80%; text-align: center; }
+        .toast.show { opacity: 1; }
+        .footer { text-align: center; color: #aaa; font-size: 0.75em; margin-top: 24px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="hero">
+        <div class="logo">🚀</div>
+        <h1>美租裂变增长计划</h1>
+        <p class="subtitle">关注美租公众号 + 视频号并转发<br>邀请同事参与，赢取激励</p>
+    </div>
+
+    <div class="rules">
+        📌 <b>参与步骤</b>：① 填写下方信息报名 → ② 生成你的专属海报 → ③ 长按保存海报并转发给同事 → ④ 同事通过你的海报链接报名，自动计入你的邀请数。
+    </div>
+
+    <div class="card">
+        <div class="invited-by" id="invitedBy"></div>
+
+        <div class="form-group">
+            <label>姓名 <span class="req">*</span></label>
+            <input type="text" id="name" placeholder="请输入真实姓名" maxlength="20">
+        </div>
+
+        <div class="form-group">
+            <label>系统号 <span class="req">*</span></label>
+            <input type="text" id="systemId" placeholder="请输入系统号（工号）" maxlength="20">
+        </div>
+
+        <div class="form-group">
+            <label>角色 <span class="req">*</span></label>
+            <div class="role-options">
+                <label class="broker" id="roleBroker">
+                    <input type="radio" name="role" value="broker"> 🏠 经纪人
+                </label>
+                <label class="manager" id="roleManager">
+                    <input type="radio" name="role" value="manager"> 📊 资管
+                </label>
+            </div>
+        </div>
+
+        <button class="submit-btn" id="submitBtn" onclick="submitRegister()">报名并生成海报</button>
+    </div>
+
+    <div class="links">
+        <a href="mine.html">查看我的邀请</a>
+    </div>
+
+    <div class="footer">
+        本活动归因基于"通过谁的链接报名"，不等同于实际关注动作<br>© 美租事业部
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="leancloud.js"></script>
+<script>
+var _invitedByRef = null;   // 邀请人 refCode（从 URL ?ref= 读取）
+var _invitedByName = null;  // 邀请人姓名（查 Participant 拿到）
+
+function toast(msg, ms) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.classList.remove('show'); }, ms || 2000);
+}
+
+// 角色单选样式联动
+function bindRole() {
+    var inputs = document.querySelectorAll('input[name="role"]');
+    inputs.forEach(function (inp) {
+        inp.addEventListener('change', function () {
+            document.getElementById('roleBroker').classList.toggle('sel', inp.value === 'broker' && inp.checked);
+            document.getElementById('roleManager').classList.toggle('sel', inp.value === 'manager' && inp.checked);
+        });
+    });
+}
+
+// 读取 URL ?ref= 作为邀请人，并反查邀请人姓名
+async function loadInvitedBy() {
+    var params = new URLSearchParams(location.search);
+    var ref = params.get('ref');
+    if (!ref) return;
+    _invitedByRef = ref;
+    try {
+        var inviter = await MZLC.findByRefCode(ref);
+        if (inviter) {
+            _invitedByName = inviter.name;
+            var box = document.getElementById('invitedBy');
+            box.style.display = 'block';
+            box.innerHTML = '邀请人：<b>' + escapeHtml(inviter.name) + '</b>（' + (inviter.role === 'broker' ? '经纪人' : '资管') + '）';
+        }
+    } catch (e) { /* 邀请人查不到也允许注册，只是不带归因 */ }
+}
+
+function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
+// localStorage 防抖：已报名过则直接进海报页
+function checkAlreadyRegistered() {
+    var cached = localStorage.getItem('mz_fission_ref');
+    if (cached) {
+        // 已有本地记录，提示并提供入口
+        var btn = document.getElementById('submitBtn');
+        btn.textContent = '你已报名，查看我的海报 →';
+        btn.onclick = function () { location.href = 'poster.html?ref=' + encodeURIComponent(cached); };
+    }
+}
+
+async function submitRegister() {
+    var name = document.getElementById('name').value.trim();
+    var systemId = document.getElementById('systemId').value.trim();
+    var roleEl = document.querySelector('input[name="role"]:checked');
+    var role = roleEl ? roleEl.value : '';
+
+    if (!name) { toast('请输入姓名'); return; }
+    if (!systemId) { toast('请输入系统号'); return; }
+    if (!role) { toast('请选择角色'); return; }
+
+    var btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '报名中...';
+
+    try {
+        var payload = {
+            name: name,
+            systemId: systemId,
+            role: role,
+            invitedBy: _invitedByRef || '',
+            invitedByName: _invitedByName || '',
+            shareUrl: '',
+        };
+
+        var created = await MZLC.createParticipant(payload);
+        var refCode = created.refCode;
+
+        // 回写 shareUrl
+        var shareUrl = MEIZU_FISSION_CONFIG.siteUrl + '?ref=' + refCode;
+        try {
+            await MZLC.req(MZLC.CLASS.PARTICIPANT + '/' + created.objectId, 'PUT', { shareUrl: shareUrl });
+            created.shareUrl = shareUrl;
+        } catch (e) { /* 回写失败不阻塞 */ }
+
+        // 写邀请关系明细（有邀请人时）
+        if (_invitedByRef) {
+            try {
+                await MZLC.createInviteLog({
+                    inviterRefCode: _invitedByRef,
+                    inviterName: _invitedByName || '',
+                    inviteeRefCode: refCode,
+                    inviteeName: name,
+                    inviteeSystemId: systemId,
+                    inviteeRole: role,
+                });
+            } catch (e) { console.warn('InviteLog 写入失败', e); }
+        }
+
+        // 本地缓存防重复
+        localStorage.setItem('mz_fission_ref', refCode);
+        localStorage.setItem('mz_fission_name', name);
+
+        toast('报名成功！正在生成海报...');
+        setTimeout(function () {
+            location.href = 'poster.html?ref=' + encodeURIComponent(refCode);
+        }, 600);
+    } catch (e) {
+        btn.disabled = false;
+        btn.textContent = '报名并生成海报';
+        if (e.code === 'DUPLICATE_SYSTEMID') {
+            toast('该系统号已报名，请勿重复参与');
+            // 跳到已有记录的海报
+            setTimeout(function () {
+                location.href = 'poster.html?ref=' + encodeURIComponent(e.existing.refCode);
+            }, 1200);
+        } else {
+            toast('报名失败：' + (e.message || '请重试'));
+        }
+    }
+}
+
+bindRole();
+loadInvitedBy();
+checkAlreadyRegistered();
+</script>
+</body>
+</html>
